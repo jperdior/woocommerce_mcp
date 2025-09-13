@@ -1,0 +1,29 @@
+services:
+  woocommerce-mcp:
+    build:
+      context: ../../
+      dockerfile: ops/docker/prod/Dockerfile
+    environment:
+      - PORT=8080
+      - GIN_MODE=release
+    networks:
+      - shared_network
+    expose:
+      - "8080"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.woocommerce-mcp-prod.rule=Host(`woocommerce-mcp.localhost`)"
+      - "traefik.http.routers.woocommerce-mcp-prod.entrypoints=web"
+      - "traefik.http.services.woocommerce-mcp-prod.loadbalancer.server.port=8080"
+      - "traefik.docker.network=shared_network"
+    restart: unless-stopped
+
+networks:
+  shared_network:
+    external: true
