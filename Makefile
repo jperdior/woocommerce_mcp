@@ -29,9 +29,12 @@ endif
 
 # Local development
 local-build: ## Build the application locally
-	go build -o woocommerce-mcp .
+	go build -o woocommerce-mcp ./cmd/api
 
 local-run: ## Run the application locally
+	go run ./cmd/api
+
+local-run-main: ## Run the application using main.go (backward compatibility)
 	go run .
 
 test: ## Run tests
