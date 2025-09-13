@@ -22,6 +22,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.woocommerce-mcp-dev.rule=Host(`woocommerce-mcp.localhost`)"
+      - "traefik.http.routers.woocommerce-mcp-dev.entrypoints=http"
       - "traefik.http.services.woocommerce-mcp-dev.loadbalancer.server.port=8080"
       - "traefik.docker.network=shared_network"
 
