@@ -4,8 +4,10 @@ A simple Model Context Protocol (MCP) server in Go using the Gin framework for W
 
 ## Features
 
+- **MCP Compliant**: Full Model Context Protocol implementation with manifest file
 - **Search Products**: Search for products in WooCommerce stores using the REST API
 - **MCP Protocol**: Implements MCP server endpoints (`/list_tools` and `/call_tool`)
+- **Manifest Support**: Provides `/manifest.json` describing server capabilities and tools
 - **Stateless Design**: All configuration (base URL, credentials) provided per request - no server-side storage
 - **Authentication**: Supports WooCommerce REST API authentication via consumer key/secret
 - **Filtering**: Comprehensive product filtering options (search terms, categories, price, stock status, etc.)
@@ -45,6 +47,8 @@ PORT=3000 ./woocommerce-mcp
 ### Available Endpoints
 
 - `GET /health` - Health check endpoint
+- `GET /manifest` - MCP server information
+- `GET /manifest.json` - Full MCP manifest file
 - `GET /list_tools` - Lists available MCP tools
 - `POST /call_tool` - Executes a specific tool
 
@@ -156,6 +160,33 @@ go build -o woocommerce-mcp
 ```bash
 go run .
 ```
+
+## MCP Manifest
+
+The server provides a comprehensive MCP manifest file at `/manifest.json` that describes:
+
+- **Server capabilities** and supported MCP version
+- **Available tools** with detailed schemas and examples
+- **Deployment options** for different environments (standalone, Docker, development)
+- **Configuration options** and environment variables
+- **Usage examples** for common operations
+- **Server metadata** including version, author, and documentation links
+
+### Viewing the Manifest
+
+```bash
+# Get basic manifest information
+curl http://localhost:8080/manifest
+
+# Get full manifest file
+curl http://localhost:8080/manifest.json
+
+# Using make commands (requires jq)
+make manifest      # Show basic info
+make manifest-file # Show full manifest
+```
+
+The manifest follows the MCP specification and can be used by MCP clients to understand server capabilities and automatically configure tool usage. The manifest is environment-agnostic - deployment details like host and port are configured at runtime via environment variables rather than being hardcoded.
 
 ## Error Handling
 

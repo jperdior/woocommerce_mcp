@@ -27,6 +27,10 @@ func (s *Server) registerRoutes(queryBus query.Bus) {
 		})
 	})
 
+	// MCP manifest endpoints
+	s.router.GET("/manifest", productPresentation.ManifestInfoHandler())
+	s.router.GET("/manifest.json", productPresentation.ManifestHandler())
+
 	// MCP protocol endpoints
 	s.router.GET("/list_tools", productPresentation.ListToolsHandler())
 	s.router.POST("/call_tool", productPresentation.SearchProductsHandler(queryBus))

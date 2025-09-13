@@ -108,6 +108,13 @@ docker-logs-stage: ## Show staging Docker logs
 health: ## Check if the service is healthy
 	curl -f http://localhost:8080/health || curl -f http://woocommerce-mcp.localhost:8000/health
 
+# Manifest check
+manifest: ## Show MCP manifest information
+	curl -s http://localhost:8080/manifest | jq . || echo "Server not running on port 8080"
+
+manifest-file: ## Show full MCP manifest file
+	curl -s http://localhost:8080/manifest.json | jq . || echo "Server not running on port 8080"
+
 # Analysis and linting
 analysis: ### Run static analysis and linter
 	docker run --rm -v $(PWD):/app -w /app golangci/golangci-lint:latest golangci-lint run --fix

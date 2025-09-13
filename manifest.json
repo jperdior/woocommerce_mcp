@@ -1,0 +1,240 @@
+{
+  "name": "woocommerce-mcp",
+  "version": "1.0.0",
+  "description": "Model Context Protocol server for WooCommerce integration. Provides tools to search and interact with WooCommerce store products via REST API.",
+  "author": "Julio Perdiguer",
+  "license": "MIT",
+  "homepage": "https://github.com/jperdior/woocommerce-mcp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jperdior/woocommerce-mcp.git"
+  },
+  "mcpVersion": "2024-11-05",
+  "capabilities": {
+    "tools": {
+      "listChanged": false
+    },
+    "resources": {},
+    "prompts": {},
+    "logging": {}
+  },
+  "tools": [
+    {
+      "name": "search_products",
+      "description": "Search for products in WooCommerce store. Supports various filters like search terms, categories, tags, status, and more.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "base_url": {
+            "type": "string",
+            "description": "WooCommerce store base URL (e.g., https://example.com)",
+            "examples": ["https://mystore.com", "https://shop.example.com"]
+          },
+          "consumer_key": {
+            "type": "string",
+            "description": "WooCommerce REST API consumer key",
+            "examples": ["ck_1234567890abcdef"]
+          },
+          "consumer_secret": {
+            "type": "string",
+            "description": "WooCommerce REST API consumer secret",
+            "examples": ["cs_1234567890abcdef"]
+          },
+          "search": {
+            "type": "string",
+            "description": "Search term to filter products by name, description, or SKU",
+            "examples": ["sneakers", "blue shirt", "SKU123"]
+          },
+          "category": {
+            "type": "string",
+            "description": "Category ID or slug to filter products",
+            "examples": ["15", "clothing", "electronics"]
+          },
+          "tag": {
+            "type": "string",
+            "description": "Tag ID or slug to filter products",
+            "examples": ["25", "sale", "featured"]
+          },
+          "status": {
+            "type": "string",
+            "description": "Product status filter",
+            "enum": ["draft", "pending", "private", "publish"],
+            "default": "publish"
+          },
+          "type": {
+            "type": "string",
+            "description": "Product type filter",
+            "enum": ["simple", "grouped", "external", "variable"],
+            "examples": ["simple", "variable"]
+          },
+          "featured": {
+            "type": "string",
+            "description": "Filter by featured products",
+            "enum": ["true", "false"],
+            "examples": ["true"]
+          },
+          "on_sale": {
+            "type": "string",
+            "description": "Filter by products on sale",
+            "enum": ["true", "false"],
+            "examples": ["true"]
+          },
+          "min_price": {
+            "type": "string",
+            "description": "Minimum price filter (numeric value as string)",
+            "pattern": "^[0-9]+(\\.[0-9]+)?$",
+            "examples": ["10.00", "25.99"]
+          },
+          "max_price": {
+            "type": "string",
+            "description": "Maximum price filter (numeric value as string)",
+            "pattern": "^[0-9]+(\\.[0-9]+)?$",
+            "examples": ["100.00", "500.50"]
+          },
+          "stock_status": {
+            "type": "string",
+            "description": "Stock status filter",
+            "enum": ["instock", "outofstock", "onbackorder"],
+            "examples": ["instock"]
+          },
+          "per_page": {
+            "type": "string",
+            "description": "Number of products per page (1-100)",
+            "pattern": "^[1-9][0-9]?$|^100$",
+            "default": "10",
+            "examples": ["10", "25", "50"]
+          },
+          "page": {
+            "type": "string",
+            "description": "Page number for pagination (starts at 1)",
+            "pattern": "^[1-9][0-9]*$",
+            "default": "1",
+            "examples": ["1", "2", "5"]
+          },
+          "order": {
+            "type": "string",
+            "description": "Sort order",
+            "enum": ["asc", "desc"],
+            "default": "desc",
+            "examples": ["asc", "desc"]
+          },
+          "orderby": {
+            "type": "string",
+            "description": "Sort by field",
+            "enum": ["date", "id", "include", "title", "slug", "price", "popularity", "rating", "menu_order"],
+            "default": "date",
+            "examples": ["price", "title", "date"]
+          }
+        },
+        "required": ["base_url", "consumer_key", "consumer_secret"],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "server": {
+    "transport": {
+      "type": "http",
+      "endpoints": {
+        "list_tools": "/list_tools",
+        "call_tool": "/call_tool",
+        "health": "/health",
+        "manifest": "/manifest.json"
+      }
+    }
+  },
+  "configuration": {
+    "deployment": {
+      "description": "This server can be deployed in multiple ways depending on your environment",
+      "options": [
+        {
+          "type": "standalone",
+          "description": "Run as a standalone HTTP server",
+          "command": "./woocommerce-mcp",
+          "default_port": 8080
+        },
+        {
+          "type": "docker",
+          "description": "Run using Docker containers",
+          "command": "docker-compose up",
+          "config_files": ["ops/docker/docker-compose.yml"]
+        },
+        {
+          "type": "development",
+          "description": "Run in development mode with hot reload",
+          "command": "go run ./cmd/api",
+          "default_port": 8080
+        }
+      ]
+    },
+    "environment_variables": {
+      "PORT": {
+        "description": "Port number for the HTTP server (environment-dependent)",
+        "type": "string",
+        "default": "8080",
+        "examples": ["8080", "3000", "9000"]
+      },
+      "ENVIRONMENT": {
+        "description": "Runtime environment",
+        "type": "string",
+        "enum": ["development", "production", "staging"],
+        "default": "production"
+      }
+    }
+  },
+  "documentation": {
+    "setup": "See SETUP_WOOCOMMERCE_API.md for WooCommerce API configuration",
+    "testing": "See TESTING.md for testing instructions",
+    "docker": "See DOCKER.md for Docker deployment instructions",
+    "deployment": "Server can be deployed standalone, via Docker, or in development mode. Host and port are configurable via environment variables.",
+    "readme": "See README.md for complete setup and usage instructions"
+  },
+  "examples": [
+    {
+      "name": "Search for sneakers",
+      "description": "Search for products containing 'sneakers' in name or description",
+      "tool": "search_products",
+      "arguments": {
+        "base_url": "https://mystore.com",
+        "consumer_key": "ck_1234567890abcdef",
+        "consumer_secret": "cs_1234567890abcdef",
+        "search": "sneakers",
+        "per_page": "10"
+      }
+    },
+    {
+      "name": "Get featured products",
+      "description": "Retrieve all featured products",
+      "tool": "search_products",
+      "arguments": {
+        "base_url": "https://mystore.com",
+        "consumer_key": "ck_1234567890abcdef",
+        "consumer_secret": "cs_1234567890abcdef",
+        "featured": "true",
+        "per_page": "20"
+      }
+    },
+    {
+      "name": "Search by price range",
+      "description": "Find products within a specific price range",
+      "tool": "search_products",
+      "arguments": {
+        "base_url": "https://mystore.com",
+        "consumer_key": "ck_1234567890abcdef",
+        "consumer_secret": "cs_1234567890abcdef",
+        "min_price": "25.00",
+        "max_price": "100.00",
+        "orderby": "price",
+        "order": "asc"
+      }
+    }
+  ],
+  "tags": [
+    "woocommerce",
+    "ecommerce",
+    "products",
+    "search",
+    "api",
+    "mcp",
+    "model-context-protocol"
+  ]
+}
