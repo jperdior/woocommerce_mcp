@@ -27,51 +27,18 @@ else
 endif
 
 # Local development
-local-build: ## Build the application locally (HTTP bridge)
-	go build -o woocommerce-mcp ./cmd/api
-
-local-build-mcp: ## Build the MCP server locally
-	go build -o woocommerce-mcp-server ./cmd/mcp
-
-local-build-http: ## Build the HTTP bridge locally
+local-build: ## Build the HTTP bridge locally
 	go build -o woocommerce-mcp-http ./cmd/http-bridge
 
-local-run: ## Run the application locally (HTTP bridge)
-	go run ./cmd/api
-
-local-run-mcp: ## Run the MCP server locally
-	go run ./cmd/mcp
-
-local-run-http: ## Run the HTTP bridge locally
+local-run: ## Run the HTTP bridge locally
 	go run ./cmd/http-bridge
-
-local-run-main: ## Run the application using main.go (backward compatibility)
-	go run .
 
 test: ## Run tests
 	go test ./...
 
 clean: ## Clean build artifacts
-	rm -f woocommerce-mcp woocommerce-mcp-server woocommerce-mcp-http
+	rm -f woocommerce-mcp-http
 	rm -rf tmp/
-
-# MCP-specific commands
-mcp-start: ## Start MCP services (both server and HTTP bridge)
-	docker-compose -p ${PROJECT_NAME} -f ${PWD}/ops/docker/docker-compose.mcp.yml up --build -d
-
-mcp-stop: ## Stop MCP services
-	docker-compose -p ${PROJECT_NAME} -f ${PWD}/ops/docker/docker-compose.mcp.yml down --remove-orphans
-
-mcp-logs: ## Show MCP services logs
-	docker-compose -p ${PROJECT_NAME} -f ${PWD}/ops/docker/docker-compose.mcp.yml logs -f
-
-mcp-test: ## Test MCP server connection
-	@echo "Testing MCP server (stdio)..."
-	echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | ./woocommerce-mcp-server || echo "Build MCP server first with 'make local-build-mcp'"
-
-mcp-test-http: ## Test HTTP bridge
-	@echo "Testing HTTP bridge..."
-	curl -f http://localhost:8090/health && echo " ✓ Health check passed" || echo " ✗ Health check failed"
 
 # Docker orchestrator integration (following chatbot-service pattern)
 start: build run ## Start WooCommerce MCP (development)

@@ -1,14 +1,14 @@
-# WooCommerce MCP Server
+# WooCommerce MCP HTTP Bridge
 
-A simple Model Context Protocol (MCP) server in Go using the Gin framework for WooCommerce product search functionality.
+A Model Context Protocol (MCP) HTTP bridge for WooCommerce product search functionality. This service provides an HTTP interface that internally uses the official MCP Go SDK, making it compatible with existing chatbot services while maintaining MCP compliance.
 
 ## Features
 
-- **MCP Compliant**: Full Model Context Protocol implementation with manifest file
-- **Search Products**: Search for products in WooCommerce stores using the REST API
-- **MCP Protocol**: Implements MCP server endpoints (`/list_tools` and `/call_tool`)
-- **Manifest Support**: Provides `/manifest.json` describing server capabilities and tools
-- **Stateless Design**: All configuration (base URL, credentials) provided per request - no server-side storage
+- **MCP Go SDK Integration**: Uses the official Model Context Protocol Go SDK
+- **HTTP Bridge**: Exposes JSON-RPC over HTTP with Server-Sent Events (SSE)
+- **WooCommerce API**: Search for products in WooCommerce stores using the REST API
+- **Chatbot Integration**: Compatible with existing chatbot message APIs
+- **Stateless Design**: All configuration (base URL, credentials) provided per request
 - **Authentication**: Supports WooCommerce REST API authentication via consumer key/secret
 - **Filtering**: Comprehensive product filtering options (search terms, categories, price, stock status, etc.)
 - **Multi-Store Support**: Can work with different WooCommerce stores in the same session
@@ -25,9 +25,9 @@ cd woocommerce_mcp
 go mod tidy
 ```
 
-3. Build the server:
+3. Build the HTTP bridge:
 ```bash
-go build -o woocommerce-mcp
+make local-build
 ```
 
 ## Usage
