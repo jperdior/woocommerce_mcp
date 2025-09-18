@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"woocommerce-mcp/internal/post/application/search_posts"
 	"woocommerce-mcp/internal/product/application/search_products"
 	"woocommerce-mcp/internal/product/infrastructure/woocommerce"
 
@@ -78,6 +79,28 @@ type SearchProductsInput struct {
 type SearchProductsOutput struct {
 	Message string `json:"message" jsonschema:"Human-readable message about the search results"`
 	Data    string `json:"data" jsonschema:"JSON-formatted product data"`
+}
+
+// SearchPostsInput defines the input structure for the search_posts tool
+type SearchPostsInput struct {
+	BaseURL    string `json:"base_url" jsonschema:"WordPress site base URL (e.g., https://example.com)"`
+	Search     string `json:"search,omitempty" jsonschema:"Search term to filter posts"`
+	Status     string `json:"status,omitempty" jsonschema:"Post status filter (publish, draft, private, pending, trash)"`
+	Author     string `json:"author,omitempty" jsonschema:"Author ID filter"`
+	Categories string `json:"categories,omitempty" jsonschema:"Comma-separated category IDs"`
+	Tags       string `json:"tags,omitempty" jsonschema:"Comma-separated tag IDs"`
+	Before     string `json:"before,omitempty" jsonschema:"Limit response to posts published before a given date (ISO 8601 format)"`
+	After      string `json:"after,omitempty" jsonschema:"Limit response to posts published after a given date (ISO 8601 format)"`
+	Page       string `json:"page,omitempty" jsonschema:"Page number for pagination (default: 1)"`
+	PerPage    string `json:"per_page,omitempty" jsonschema:"Number of posts per page (default: 10, max: 100)"`
+	OrderBy    string `json:"orderby,omitempty" jsonschema:"Sort by field (date, relevance, id, include, title, slug)"`
+	Order      string `json:"order,omitempty" jsonschema:"Sort order (asc, desc)"`
+}
+
+// SearchPostsOutput defines the output structure for the search_posts tool
+type SearchPostsOutput struct {
+	Message string `json:"message" jsonschema:"Human-readable message about the search results"`
+	Data    string `json:"data" jsonschema:"JSON-formatted post data"`
 }
 
 // HTTPToolCall represents the HTTP request format for tool calls
@@ -200,6 +223,57 @@ func SearchProductsTool(ctx context.Context, req *mcp.CallToolRequest, input Sea
 	}, nil
 }
 
+// SearchPostsTool implements the search_posts MCP tool
+func SearchPostsTool(ctx context.Context, req *mcp.CallToolRequest, input SearchPostsInput) (*mcp.CallToolResult, SearchPostsOutput, error) {
+	// Validate required fields
+	if input.BaseURL == "" {
+		return nil, SearchPostsOutput{}, fmt.Errorf("base_url is required")
+	}
+
+	// Create search request
+	request := &search_posts.SearchRequest{
+		BaseURL:    input.BaseURL,
+		Search:     input.Search,
+		Status:     input.Status,
+		Author:     input.Author,
+		Categories: input.Categories,
+		Tags:       input.Tags,
+		Before:     input.Before,
+		After:      input.After,
+		Page:       input.Page,
+		PerPage:    input.PerPage,
+		OrderBy:    input.OrderBy,
+		Order:      input.Order,
+	}
+
+	// Execute search
+	searcher := search_posts.NewPostSearcher(nil) // We pass nil since the searcher creates its own repository
+	response, err := searcher.Execute(ctx, request)
+	if err != nil {
+		return nil, SearchPostsOutput{}, fmt.Errorf("failed to search posts: %w", err)
+	}
+
+	// Convert response to JSON
+	jsonData, err := response.ToJSON()
+	if err != nil {
+		return nil, SearchPostsOutput{}, fmt.Errorf("failed to serialize response: %w", err)
+	}
+
+	// Create human-readable message
+	var message string
+	if len(response.Posts) == 0 {
+		message = "No posts found matching the search criteria"
+	} else {
+		message = fmt.Sprintf("Found %d post(s) (page %d of %d)",
+			len(response.Posts), response.CurrentPage, response.TotalPages)
+	}
+
+	return nil, SearchPostsOutput{
+		Message: message,
+		Data:    jsonData,
+	}, nil
+}
+
 // NewHTTPBridge creates a new HTTP bridge with MCP server
 func NewHTTPBridge() *HTTPBridge {
 	// Create MCP server
@@ -213,6 +287,12 @@ func NewHTTPBridge() *HTTPBridge {
 		Name:        "search_products",
 		Description: "Search for products in WooCommerce store. Supports various filters like search terms, categories, tags, status, and more.",
 	}, SearchProductsTool)
+
+	// Add the search_posts tool
+	mcp.AddTool(mcpServer, &mcp.Tool{
+		Name:        "search_posts",
+		Description: "Search for blog posts in WordPress sites. Supports various filters like search terms, categories, tags, author, status, and more.",
+	}, SearchPostsTool)
 
 	// Create HTTP router
 	router := gin.Default()
@@ -300,6 +380,28 @@ func (b *HTTPBridge) handleToolsList(c *gin.Context, request JsonRpcRequest) {
 				"required": []string{"base_url", "consumer_key", "consumer_secret"},
 			},
 		},
+		{
+			"name":        "search_posts",
+			"description": "Search for blog posts in WordPress sites. Supports various filters like search terms, categories, tags, author, status, and more.",
+			"inputSchema": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"base_url":   map[string]string{"type": "string", "description": "WordPress site base URL"},
+					"search":     map[string]string{"type": "string", "description": "Search term to filter posts"},
+					"status":     map[string]string{"type": "string", "description": "Post status filter"},
+					"author":     map[string]string{"type": "string", "description": "Author ID filter"},
+					"categories": map[string]string{"type": "string", "description": "Comma-separated category IDs"},
+					"tags":       map[string]string{"type": "string", "description": "Comma-separated tag IDs"},
+					"before":     map[string]string{"type": "string", "description": "Posts published before date (ISO 8601)"},
+					"after":      map[string]string{"type": "string", "description": "Posts published after date (ISO 8601)"},
+					"per_page":   map[string]string{"type": "string", "description": "Number of posts per page"},
+					"page":       map[string]string{"type": "string", "description": "Page number"},
+					"order":      map[string]string{"type": "string", "description": "Sort order"},
+					"orderby":    map[string]string{"type": "string", "description": "Sort field"},
+				},
+				"required": []string{"base_url"},
+			},
+		},
 	}
 
 	response := JsonRpcResponse{
@@ -326,12 +428,19 @@ func (b *HTTPBridge) handleToolsCall(c *gin.Context, request JsonRpcRequest) {
 		return
 	}
 
-	// Only handle search_products for now
-	if callRequest.Name != "search_products" {
+	// Handle different tools
+	switch callRequest.Name {
+	case "search_products":
+		b.handleSearchProducts(c, request, callRequest)
+	case "search_posts":
+		b.handleSearchPosts(c, request, callRequest)
+	default:
 		b.sendJsonRpcError(c, request.ID, -32601, "Unknown tool", fmt.Sprintf("Tool '%s' not found", callRequest.Name))
-		return
 	}
+}
 
+// handleSearchProducts handles the search_products tool call
+func (b *HTTPBridge) handleSearchProducts(c *gin.Context, request JsonRpcRequest, callRequest CallToolRequest) {
 	// Convert arguments to SearchProductsInput
 	argsJSON, err := json.Marshal(callRequest.Arguments)
 	if err != nil {
@@ -358,6 +467,45 @@ func (b *HTTPBridge) handleToolsCall(c *gin.Context, request JsonRpcRequest) {
 		{
 			"type": "text",
 			"text": resultText,
+		},
+	}
+
+	response := JsonRpcResponse{
+		JsonRpc: "2.0",
+		Result:  map[string]interface{}{"content": content},
+		ID:      request.ID,
+	}
+
+	b.sendSSEResponse(c, response)
+}
+
+// handleSearchPosts handles the search_posts tool call
+func (b *HTTPBridge) handleSearchPosts(c *gin.Context, request JsonRpcRequest, callRequest CallToolRequest) {
+	// Convert arguments to SearchPostsInput
+	argsJSON, err := json.Marshal(callRequest.Arguments)
+	if err != nil {
+		b.sendJsonRpcError(c, request.ID, -32602, "Invalid arguments", err.Error())
+		return
+	}
+
+	var input SearchPostsInput
+	if err := json.Unmarshal(argsJSON, &input); err != nil {
+		b.sendJsonRpcError(c, request.ID, -32602, "Invalid input format", err.Error())
+		return
+	}
+
+	// Call the MCP tool directly
+	_, output, err := SearchPostsTool(c.Request.Context(), nil, input)
+	if err != nil {
+		b.sendJsonRpcError(c, request.ID, -32603, "Tool execution failed", err.Error())
+		return
+	}
+
+	// Format response as expected by the message API
+	content := []map[string]interface{}{
+		{
+			"type": "text",
+			"text": output.Data,
 		},
 	}
 
@@ -416,6 +564,18 @@ func (b *HTTPBridge) handleLegacyListTools(c *gin.Context) {
 				"required": []string{"base_url", "consumer_key", "consumer_secret"},
 			},
 		},
+		{
+			"name":        "search_posts",
+			"description": "Search for blog posts in WordPress sites. Supports various filters like search terms, categories, tags, author, status, and more.",
+			"inputSchema": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"base_url": map[string]string{"type": "string", "description": "WordPress site base URL"},
+					"search":   map[string]string{"type": "string", "description": "Search term to filter posts"},
+				},
+				"required": []string{"base_url"},
+			},
+		},
 	}
 	c.JSON(http.StatusOK, map[string]interface{}{"tools": tools})
 }
@@ -431,14 +591,22 @@ func (b *HTTPBridge) handleLegacyCallTool(c *gin.Context) {
 		return
 	}
 
-	// Only handle search_products for now
-	if toolCall.Name != "search_products" {
+	// Handle different tools
+	switch toolCall.Name {
+	case "search_products":
+		b.handleLegacySearchProducts(c, toolCall)
+	case "search_posts":
+		b.handleLegacySearchPosts(c, toolCall)
+	default:
 		c.JSON(http.StatusBadRequest, HTTPToolResult{
 			Content: []HTTPContent{{Type: "text", Text: fmt.Sprintf("Unknown tool: %s", toolCall.Name)}},
 			IsError: true,
 		})
-		return
 	}
+}
+
+// handleLegacySearchProducts handles legacy search_products calls
+func (b *HTTPBridge) handleLegacySearchProducts(c *gin.Context, toolCall HTTPToolCall) {
 
 	// Convert arguments to SearchProductsInput
 	argsJSON, err := json.Marshal(toolCall.Arguments)
@@ -461,6 +629,44 @@ func (b *HTTPBridge) handleLegacyCallTool(c *gin.Context) {
 
 	// Call the MCP tool directly
 	_, output, err := SearchProductsTool(c.Request.Context(), nil, input)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, HTTPToolResult{
+			Content: []HTTPContent{{Type: "text", Text: fmt.Sprintf("Tool execution failed: %v", err)}},
+			IsError: true,
+		})
+		return
+	}
+
+	// Return successful result
+	resultText := fmt.Sprintf("%s\n\n%s", output.Message, output.Data)
+	c.JSON(http.StatusOK, HTTPToolResult{
+		Content: []HTTPContent{{Type: "text", Text: resultText}},
+	})
+}
+
+// handleLegacySearchPosts handles legacy search_posts calls
+func (b *HTTPBridge) handleLegacySearchPosts(c *gin.Context, toolCall HTTPToolCall) {
+	// Convert arguments to SearchPostsInput
+	argsJSON, err := json.Marshal(toolCall.Arguments)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, HTTPToolResult{
+			Content: []HTTPContent{{Type: "text", Text: fmt.Sprintf("Invalid arguments: %v", err)}},
+			IsError: true,
+		})
+		return
+	}
+
+	var input SearchPostsInput
+	if err := json.Unmarshal(argsJSON, &input); err != nil {
+		c.JSON(http.StatusBadRequest, HTTPToolResult{
+			Content: []HTTPContent{{Type: "text", Text: fmt.Sprintf("Invalid input format: %v", err)}},
+			IsError: true,
+		})
+		return
+	}
+
+	// Call the MCP tool directly
+	_, output, err := SearchPostsTool(c.Request.Context(), nil, input)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, HTTPToolResult{
 			Content: []HTTPContent{{Type: "text", Text: fmt.Sprintf("Tool execution failed: %v", err)}},
