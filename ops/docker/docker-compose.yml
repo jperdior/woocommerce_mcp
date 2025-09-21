@@ -1,8 +1,5 @@
 services:
   woocommerce-mcp:
-    build:
-      context: ../../
-      dockerfile: ops/docker/Dockerfile.http-bridge
     restart: unless-stopped
     environment:
       - PORT=8090
