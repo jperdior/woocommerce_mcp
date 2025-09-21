@@ -164,19 +164,20 @@ func (c *Client) CountProducts(ctx context.Context, criteria *domain.SearchCrite
 
 // countProductsFallback is a fallback method to count products when headers are not available
 func (c *Client) countProductsFallback(ctx context.Context, criteria *domain.SearchCriteria) (int64, error) {
-	// Make a request with per_page=1 and parse the response
+	// Make a request with a reasonable per_page to get actual results
 	tempCriteria := *criteria
-	tempCriteria.PerPage = 1
+	tempCriteria.PerPage = 100 // Get up to 100 products to count
 	tempCriteria.Page = 1
 
-	_, err := c.SearchProducts(ctx, &tempCriteria)
+	products, err := c.SearchProducts(ctx, &tempCriteria)
 	if err != nil {
 		return 0, err
 	}
 
-	// This is not ideal, but without proper count endpoint, we'd need to implement pagination
-	// For now, return 0 and let the application handle it
-	return 0, nil
+	// Return the actual count of products found
+	// Note: This is a simplified approach that works for small result sets
+	// For large result sets, we'd need to implement proper pagination counting
+	return int64(len(products)), nil
 }
 
 // addAuthParams adds authentication parameters to the query
